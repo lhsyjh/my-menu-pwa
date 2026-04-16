@@ -1,23 +1,201 @@
-import logo from './logo.svg';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 
 function App() {
+  const [dishes, setDishes] = useState(() => {
+    const saved = localStorage.getItem('my-menu-data');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [activeCategory, setActiveCategory] = useState('全部');
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [selectedDish, setSelectedDish] = useState(null); // Track which dish is being viewed
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Form state (Added 'intro' and 'ingredients')
+  const [newDish, setNewDish] = useState({ 
+    name: '', category: '肉类', intro: '', ingredients: '', recipe: '', image: '' 
+  });
+
+  useEffect(() => {
+    localStorage.setItem('my-menu-data', JSON.stringify(dishes));
+  }, [dishes]);
+
+  const categories = ['全部', '肉类', '蔬菜', '主食'];
+  const filteredDishes = activeCategory === '全部' ? dishes : dishes.filter(d => d.category === activeCategory);
+
+  const openAddForm = () => {
+    setNewDish({
+      name: '',
+      // 如果当前是“全部”，则默认选“肉类”；否则默认选当前分类
+      category: activeCategory === '全部' ? '肉类' : activeCategory,
+      intro: '',
+      ingredients: '',
+      recipe: '',
+      image: ''
+    });
+    setIsEditing(false);
+    setShowAddForm(true);
+  };
+
+  // 打开编辑表单
+  const openEditForm = (dish) => {
+    setNewDish(dish);       // 1. 将当前菜品数据填入表单状态
+    setIsEditing(true);      // 2. 标记为编辑模式
+    setSelectedDish(null);   // 3. 关键：立即关闭详情页面，这样就能看到下层的表单了
+    setShowAddForm(true);    // 4. 打开表单弹窗
+  };
+
+  // 统一的保存逻辑（新增或更新）
+  const handleSaveDish = (e) => {
+    e.preventDefault();
+    
+    if (isEditing) {
+      // 更新逻辑：找到对应的 id 进行替换
+      const updatedDishes = dishes.map(d => d.id === newDish.id ? newDish : d);
+      setDishes(updatedDishes);
+    } else {
+      // 新增逻辑
+      const dishToAdd = { ...newDish, id: Date.now(), image: 'https://via.placeholder.com/150' };
+      setDishes([...dishes, dishToAdd]);
+    }
+
+    // 重置状态
+    setShowAddForm(false);
+    setIsEditing(false);
+    setSelectedDish(null); // 如果是从详情页编辑的，关闭详情页
+  };
+
+  const deleteDish = (id) => {
+    // Confirm with the user before deleting
+    if (window.confirm('确定要删除这道菜吗？')) {
+      const updatedDishes = dishes.filter(dish => dish.id !== id);
+      setDishes(updatedDishes);
+      setSelectedDish(null); // Close the detail modal after deletion
+    }
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div className="app-container">
+      {/* Sidebar - Same as before */}
+      <aside className="sidebar">
+        <h2>我的菜单</h2>
+        <nav className="side-nav">
+          {categories.map(cat => (
+            <button key={cat} className={activeCategory === cat ? 'active' : ''} onClick={() => setActiveCategory(cat)}>
+              {cat}
+            </button>
+          ))}
+        </nav>
+        <button className="add-btn-sidebar" onClick={openAddForm}>＋ 新增菜品</button>
+      </aside>
+
+      {/* Main Content */}
+      <main className="main-content">
+        <header className="content-header"><h2>{activeCategory}</h2></header>
+
+        <div className="dish-scroll-area">
+          <div className="dish-grid">
+            {filteredDishes.map(dish => (
+              /* 关键点：点击卡片时，将当前 dish 对象存入 selectedDish 状态 */
+              <div key={dish.id} className="dish-card" onClick={() => setSelectedDish(dish)}>
+                <img src={dish.image} alt={dish.name} />
+                <div className="dish-info">
+                  <h4>{dish.name}</h4>
+                  <p className="intro-text">{dish.intro || ''}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          {filteredDishes.length === 0 && <p className="empty-msg">这里还没有菜品，快去添加吧！</p>}
+        </div>
+
+        {/* 1. Add Form Modal */}
+        {showAddForm && (
+          <div className="modal-overlay" onClick={() => setShowAddForm(false)}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
+              <h3>{isEditing ? '修改菜品' : '添加新菜品'}</h3>
+              <form onSubmit={handleSaveDish}>
+                {/* ... 输入框代码不变，确保所有 value 都绑定了 newDish ... */}
+                <input 
+                    type="text" 
+                    placeholder="菜名" 
+                    required 
+                    value={newDish.name} 
+                    onChange={e => setNewDish({...newDish, name: e.target.value})} 
+                />
+                
+                {/* 关键修复点：确保 select 绑定了 value 和 onChange */}
+                <select 
+                  value={newDish.category} 
+                  onChange={e => setNewDish({...newDish, category: e.target.value})}
+                >
+                  {categories.filter(c => c !== '全部').map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+
+                <input 
+                  type="text" 
+                  placeholder="一句话简介 (选填)" 
+                  value={newDish.intro}
+                  onChange={e => setNewDish({...newDish, intro: e.target.value})} 
+                />
+                <textarea 
+                  placeholder="食材细则 (选填)" 
+                  value={newDish.ingredients}
+                  onChange={e => setNewDish({...newDish, ingredients: e.target.value})} 
+                />
+                <textarea 
+                  placeholder="详细做法说明 (选填)" 
+                  value={newDish.recipe}
+                  onChange={e => setNewDish({...newDish, recipe: e.target.value})} 
+                />
+                <div className="form-actions">
+                  <button type="submit" className="save-btn">
+                    {isEditing ? '保存修改' : '保存到菜单'}
+                  </button>
+                  <button type="button" onClick={() => {setShowAddForm(false); setIsEditing(false);}}>取消</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+        {/* Detail View Modal - 详情弹窗 */}
+        {selectedDish && (
+          <div className="modal-overlay" onClick={() => setSelectedDish(null)}>
+            <div className="modal-content detail-view" onClick={e => e.stopPropagation()}>
+              <button className="close-btn" onClick={() => setSelectedDish(null)}>×</button>
+              <img src={selectedDish.image} alt={selectedDish.name} className="detail-img" />
+              
+              <div className="detail-header-row">
+                <h2>{selectedDish.name}</h2>
+                <div className="action-buttons">
+                  {/* 编辑按钮 */}
+                  <button className="edit-btn" onClick={() => openEditForm(selectedDish)}>
+                    修改
+                  </button>
+                  <button className="delete-btn" onClick={() => deleteDish(selectedDish.id)}>
+                    删除
+                  </button>
+                </div>
+              </div>
+              
+              <div className="detail-section">
+                <h4>🍎 食材细则</h4>
+                {/* If no ingredients, show placeholder text */}
+                <p>{selectedDish.ingredients || '暂无食材记录'}</p>
+              </div>
+              
+              <div className="detail-section">
+                <h4>🍳 做法说明</h4>
+                {/* If no recipe, show placeholder text */}
+                <p>{selectedDish.recipe || '暂无做法记录'}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
