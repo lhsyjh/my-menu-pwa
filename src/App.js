@@ -154,7 +154,12 @@ function App() {
       const targetIndex = parseInt(categoryItem.getAttribute('data-index'));
       
       // Reuse your existing dragOver logic if it's a valid target
-      if (!isNaN(targetIndex) && draggedIndex !== null && draggedIndex !== targetIndex) {
+      if (
+        !isNaN(targetIndex) && 
+        draggedIndex !== null && 
+        draggedIndex !== targetIndex &&
+        targetIndex !== 0 // <--- 禁止移动到索引为 0 的位置
+      ) {
         // Manual trigger of your logic
         const newCategories = [...categories];
         const draggedItem = newCategories[draggedIndex];
