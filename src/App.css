@@ -211,3 +211,16 @@
   background-color: #1890ff;
   color: white;
 }
+
+.dish-count-tag {
+  font-size: 12px;
+  color: #bbb;
+  margin-left: 8px;
+  pointer-events: none; /* 防止点击数字触发其他事件 */
+}
+
+.category-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}

@@ -21,8 +21,40 @@ function App() {
     localStorage.setItem('my-menu-data', JSON.stringify(dishes));
   }, [dishes]);
 
-  const categories = ['全部', '肉类', '蔬菜', '主食'];
+  const [categories, setCategories] = useState(() => {
+    const savedCats = localStorage.getItem('my-menu-categories');
+    // 如果没有缓存，给几个默认值
+    return savedCats ? JSON.parse(savedCats) : ['全部', '肉类', '蔬菜', '主食'];
+  });
   const filteredDishes = activeCategory === '全部' ? dishes : dishes.filter(d => d.category === activeCategory);
+
+  // 2. 当 categories 改变时保存到本地
+  useEffect(() => {
+    localStorage.setItem('my-menu-categories', JSON.stringify(categories));
+  }, [categories]);
+
+  // 添加新分类
+  const addCategory = () => {
+    const newCat = prompt("请输入新分类名称:");
+    if (newCat && !categories.includes(newCat)) {
+      setCategories([...categories, newCat]);
+    } else if (categories.includes(newCat)) {
+      alert("该分类已存在");
+    }
+  };
+
+  // 删除分类
+  const deleteCategory = (catToDelete) => {
+    if (catToDelete === '全部') return; // 不允许删除“全部”
+    
+    if (window.confirm(`确定要删除“${catToDelete}”分类吗？`)) {
+      setCategories(categories.filter(cat => cat !== catToDelete));
+      // 如果当前正在查看这个分类，切换回“全部”
+      if (activeCategory === catToDelete) {
+        setActiveCategory('全部');
+      }
+    }
+  };
 
   const openAddForm = () => {
     setNewDish({
@@ -81,12 +113,34 @@ function App() {
       <aside className="sidebar">
         <h2>我的菜单</h2>
         <nav className="side-nav">
-          {categories.map(cat => (
-            <button key={cat} className={activeCategory === cat ? 'active' : ''} onClick={() => setActiveCategory(cat)}>
-              {cat}
-            </button>
-          ))}
+        {categories.map(cat => {
+          const isEmpty = !dishes.some(d => d.category === cat);
+          return (
+            <div key={cat} className="category-item">
+              <button 
+                className={activeCategory === cat ? 'active' : ''} 
+                onClick={() => setActiveCategory(cat)}
+              >
+                {cat}
+              </button>
+              
+              {/* 只有不是“全部”且为空的分类才显示删除按钮 */}
+              {cat !== '全部' && isEmpty && (
+                <span className="delete-cat-icon" onClick={() => deleteCategory(cat)}>×</span>
+              )}
+              
+              {/* (可选) 如果不为空，可以显示一个淡淡的数字提醒有多少道菜 */}
+              {cat !== '全部' && !isEmpty && (
+                <span className="dish-count-tag">
+                  {dishes.filter(d => d.category === cat).length}
+                </span>
+              )}
+            </div>
+          );
+        })}
         </nav>
+        {/* 新增分类按钮 */}
+        <button className="add-cat-btn" onClick={addCategory}>＋ 管理分类</button>
         <button className="add-btn-sidebar" onClick={openAddForm}>＋ 新增菜品</button>
       </aside>
 
