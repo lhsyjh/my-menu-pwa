@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import { polyfill } from 'mobile-drag-drop';
+// 尝试删掉报错的那一行引用，改为只引用基础库
+// import { scrollBehaviourDragImageTranslateOverride } from '...'; 
+
+// 在 App 组件外部初始化
+polyfill();
+
+// 如果你依然想解决移动端滚动时的镜像偏移问题，通常只需要这一句：
+window.addEventListener('touchmove', function() {}, { passive: false });
 
 function App() {
   const [dishes, setDishes] = useState(() => {
