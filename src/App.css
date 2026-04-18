@@ -21,16 +21,21 @@
   position: relative;
   overflow-y: auto;
   overflow-x: hidden; /* 防止拖拽图标超出宽度 */
+  touch-action: none; /* 阻止侧边栏在触摸时滚动，专门用于拖拽 */
 }
 
 .side-nav button {
   padding: 12px;
   text-align: left;
   border: none;
-  background: none;
   cursor: pointer;
   border-radius: 8px;
   font-size: 16px;
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  background: transparent;
+  pointer-events: auto; /* 确保文字依然可以点击切换分类 */
 }
 
 .side-nav button.active {
@@ -259,15 +264,6 @@
 /* 鼠标悬浮在分类项上时，手柄颜色加深 */
 .category-item:hover .drag-handle {
   color: #888;
-}
-
-/* 修改原本的按钮样式，确保不遮挡拖拽事件 */
-.side-nav button {
-  flex-grow: 1;
-  display: flex;
-  align-items: center;
-  background: transparent;
-  pointer-events: auto; /* 确保文字依然可以点击切换分类 */
 }
 
 .edit-cat-icon {

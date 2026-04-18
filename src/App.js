@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { polyfill } from 'mobile-drag-drop';
-// 尝试删掉报错的那一行引用，改为只引用基础库
-// import { scrollBehaviourDragImageTranslateOverride } from '...'; 
-
-// 在 App 组件外部初始化
-polyfill();
 
 // 如果你依然想解决移动端滚动时的镜像偏移问题，通常只需要这一句：
 window.addEventListener('touchmove', function() {}, { passive: false });
@@ -148,6 +142,31 @@ function App() {
     }
   };
 
+  // Add this to your App component
+  const handleTouchMove = (e) => {
+    // Get the element at the current touch position
+    const touch = e.touches[0];
+    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+    
+    // Find the closest category item
+    const categoryItem = target?.closest('.category-item');
+    if (categoryItem) {
+      const targetIndex = parseInt(categoryItem.getAttribute('data-index'));
+      
+      // Reuse your existing dragOver logic if it's a valid target
+      if (!isNaN(targetIndex) && draggedIndex !== null && draggedIndex !== targetIndex) {
+        // Manual trigger of your logic
+        const newCategories = [...categories];
+        const draggedItem = newCategories[draggedIndex];
+        newCategories.splice(draggedIndex, 1);
+        newCategories.splice(targetIndex, 0, draggedItem);
+        
+        setDraggedIndex(targetIndex);
+        setCategories(newCategories);
+      }
+    }
+  };
+
   // 当拖拽开始时
   const handleDragStart = (e, index) => {
     if (categories[index] === '全部') return;
@@ -203,12 +222,18 @@ function App() {
           return (
             <div 
               key={cat} 
+              data-index={index} // Important for touch identification
               className={`category-item ${draggedIndex === index ? 'dragging' : ''}`}
               // 核心拖拽属性
               draggable={!isAll} 
               onDragStart={(e) => handleDragStart(e, index)}
               onDragOver={(e) => handleDragOver(e, index)}
               onDragEnd={handleDragEnd}
+
+              // Mobile Touch Support
+              onTouchStart={() => !isAll && setDraggedIndex(index)}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={() => setDraggedIndex(null)}
             >
               <button 
                 className={activeCategory === cat ? 'active' : ''} 
