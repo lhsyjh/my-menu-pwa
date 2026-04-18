@@ -18,9 +18,9 @@
 .side-nav {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 20px;
-  flex-grow: 1;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden; /* 防止拖拽图标超出宽度 */
 }
 
 .side-nav button {
@@ -223,4 +223,61 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  background: white; /* 确保拖拽时有背景色 */
+  transition: transform 0.1s ease;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* 正在被拖拽的样式 */
+.category-item.dragging {
+  opacity: 0.5;
+  background-color: #f0f0f0;
+  border: 1px dashed #ccc;
+  transform: scale(0.98);
+}
+
+/* 移除浏览器默认的某些拖拽样式（可选） */
+.category-item[draggable="true"] {
+  -webkit-user-drag: element;
+}
+
+/* 拖拽手柄 */
+.drag-handle {
+  margin-right: 8px;
+  color: #ccc;
+  cursor: grab; /* 显示“抓取”手势 */
+  font-size: 14px;
+}
+
+.category-item:active {
+  cursor: grabbing;
+}
+
+/* 鼠标悬浮在分类项上时，手柄颜色加深 */
+.category-item:hover .drag-handle {
+  color: #888;
+}
+
+/* 修改原本的按钮样式，确保不遮挡拖拽事件 */
+.side-nav button {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  background: transparent;
+  pointer-events: auto; /* 确保文字依然可以点击切换分类 */
+}
+
+.edit-cat-icon {
+  cursor: pointer;
+  color: #888;
+  font-size: 14px;
+  padding: 0 4px;
+  transition: color 0.2s;
+}
+
+.edit-cat-icon:hover {
+  color: #1890ff; /* Blue when hovering */
 }

@@ -11,6 +11,7 @@ function App() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedDish, setSelectedDish] = useState(null); // Track which dish is being viewed
   const [isEditing, setIsEditing] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState(null);
 
   // Form state (Added 'intro' and 'ingredients')
   const [newDish, setNewDish] = useState({ 
@@ -107,34 +108,126 @@ function App() {
     }
   };
 
+  const renameCategory = (oldName) => {
+    if (oldName === '全部') return;
+  
+    const newName = prompt("Enter new category name:", oldName);
+    
+    // Basic validation: not empty, not the same, and doesn't exist already
+    if (!newName || newName === oldName) return;
+    if (categories.includes(newName)) {
+      alert("This category name already exists.");
+      return;
+    }
+  
+    // 1. Update categories list
+    const updatedCategories = categories.map(cat => cat === oldName ? newName : cat);
+    setCategories(updatedCategories);
+  
+    // 2. Sync all dishes belonging to this category
+    const updatedDishes = dishes.map(dish => {
+      if (dish.category === oldName) {
+        return { ...dish, category: newName };
+      }
+      return dish;
+    });
+    setDishes(updatedDishes);
+  
+    // 3. Update active category if it was the one being renamed
+    if (activeCategory === oldName) {
+      setActiveCategory(newName);
+    }
+  };
+
+  // 当拖拽开始时
+  const handleDragStart = (e, index) => {
+    if (categories[index] === '全部') return;
+    setDraggedIndex(index);
+  
+    // 创建一个透明图片，让鼠标移动时看起来只有侧边栏在动
+    if (e.dataTransfer) {
+      const img = new Image();
+      img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+      e.dataTransfer.setDragImage(img, 0, 0);
+      
+      // 顺便设置一下拖拽效果，这在某些浏览器上能增加稳定性
+      e.dataTransfer.effectAllowed = 'move';
+    }
+  };
+
+  // 当拖拽经过某个分类时
+  const handleDragOver = (e, index) => {
+    e.preventDefault(); // 必须调用，否则 drop 事件不会触发
+    e.dataTransfer.dropEffect = 'move'; // 明确显示为移动效果
+    
+    if (draggedIndex === null || draggedIndex === index) return;
+    if (categories[index] === '全部') return; // 不允许拖到“全部”上方
+
+    // 实时交换位置，产生“挤开”的视觉效果
+    const newCategories = [...categories];
+    const draggedItem = newCategories[draggedIndex];
+    newCategories.splice(draggedIndex, 1);
+    newCategories.splice(index, 0, draggedItem);
+    
+    setDraggedIndex(index);
+    setCategories(newCategories);
+  };
+
+  // 当拖拽结束
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
+
   return (
     <div className="app-container">
       {/* Sidebar - Same as before */}
       <aside className="sidebar">
         <h2>我的菜单</h2>
-        <nav className="side-nav">
-        {categories.map(cat => {
+        <nav 
+          className="side-nav"
+          // 防止拖到导航栏以外的地方导致奇怪的停顿
+          onDragOver={(e) => e.preventDefault()}
+        >
+        {categories.map((cat, index) => {
           const isEmpty = !dishes.some(d => d.category === cat);
+          const isAll = cat === '全部';
           return (
-            <div key={cat} className="category-item">
+            <div 
+              key={cat} 
+              className={`category-item ${draggedIndex === index ? 'dragging' : ''}`}
+              // 核心拖拽属性
+              draggable={!isAll} 
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragEnd={handleDragEnd}
+            >
               <button 
                 className={activeCategory === cat ? 'active' : ''} 
                 onClick={() => setActiveCategory(cat)}
               >
+                {/* 拖拽手柄图标 */}
+                {!isAll && <span className="drag-handle">⠿</span>}
                 {cat}
               </button>
               
-              {/* 只有不是“全部”且为空的分类才显示删除按钮 */}
-              {cat !== '全部' && isEmpty && (
-                <span className="delete-cat-icon" onClick={() => deleteCategory(cat)}>×</span>
-              )}
+              <div className="category-actions">
+                {/* 只有不是“全部”且为空的分类才显示删除按钮 */}
+                {!isAll && isEmpty && (
+                  <span className="delete-cat-icon" onClick={() => deleteCategory(cat)}>×</span>
+                )}
+                {/* (可选) 如果不为空，可以显示一个淡淡的数字提醒有多少道菜 */}
+                {!isAll && !isEmpty && (
+                  <span className="dish-count-tag">
+                    {dishes.filter(d => d.category === cat).length}
+                  </span>
+                )}
+                {/* Rename button */}
+                {!isAll && (
+                  <span className="edit-cat-icon" onClick={() => renameCategory(cat)}>✎</span>
+                )}
+              </div>
               
-              {/* (可选) 如果不为空，可以显示一个淡淡的数字提醒有多少道菜 */}
-              {cat !== '全部' && !isEmpty && (
-                <span className="dish-count-tag">
-                  {dishes.filter(d => d.category === cat).length}
-                </span>
-              )}
+              
             </div>
           );
         })}
